@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+  
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF8">
+    <title>Scheme Interpreter</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <script src="table.js"></script>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  
+  <body onload="">
+    <div id="simulator" class="container-fluid col-md-8 col-md-offset-2">
+      <div class="row row-bottum-buffer">
+        <h1>Scheme Interpreter</h1>
+      </div>
+      <div id="machine" class="row">
+        <!-- left column -->
+        <div class="col-md-8">
+          <div class="row row-bottum-buffer">
+            <h4>Input:</h4>
+            <div class="input-group input-group-sm">
+              <input id="input-code" type="text" class="form-control"></input>
+              <span class="input-group-btn">
+                <button class="btn btn-default" onclick="parse()">new</button>
+              </span>
+            </div>
+          </div>
+          <div class="row row-bottum-buffer">
+            <h4>Output:</h4>
+            <p id="output"></p>
+          </div>
+        </div>
+        <!-- right colume -->
+        <div class="col-md-4">
+          <h4>Examples:</h4>
+          <div class="list-group">
+            <a href="#" class="list-group-item" onclick="">Z(x) = 0</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+
+</html>
