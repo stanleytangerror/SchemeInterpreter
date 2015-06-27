@@ -11,6 +11,11 @@ function parse() {
                   + '<\p>'; }, '');
 }
 
+function inc() {
+      document.getElementById('input-code').value = '(define f (lambda (x) (+ x 1)))' 
+      + '(f 2)';
+}
+
 function tokenize(str) {
       // debugger
       function lst2str(preVal, curVal, idx, arr) { return preVal + curVal; }
