@@ -26,6 +26,16 @@ function inc() {
       + '(inc 2)';
 }
 
+function add() {
+      document.getElementById('input-code').value = '(define add (lambda (x y) (+ x y)))\n' 
+      + '(add 2 3)';
+}
+
+function max() {
+      document.getElementById('input-code').value = '(define max (lambda (x y) (if (> x y) x y)))\n' 
+      + '(max 6 8)';
+}
+
 function tokenize(str) {
       // debugger
       function lst2str(preVal, curVal, idx, arr) { return preVal + curVal; }
@@ -176,7 +186,7 @@ function look_up(id, env) {
 
 function output_env(env) {
       var str = '';
-      for (key in env) {
+      for (var key in env) {
             str += '(' + key + ', ' + output_data(env[key]) + '), ';
       }
       return str;
@@ -212,6 +222,10 @@ function Data_var(str) {
       return Data('variable', str); 
 }
 
+function Data_bool(str) {
+      return Data('boolean', str); 
+}
+
 function Data_proc(args, body, env) {
       return Data('procedure', 
             {'arguments': args, 'body': body, 'environment': deepcopy(env)});
@@ -233,6 +247,79 @@ function output_data(data) {
             return 'procedure';
       }
 }
+
+function compare_data(data1, data2) {
+     if (JSON.stringify(data1) !== JSON.stringify(data2))
+            return false;
+            return true;
+}
+
+/* ================================================
+*   scheme primitive procedure
+*  ================================================
+*/
+
+var prim_proc = {
+      '#t': Data_bool('#t'),
+      '#f': Data_bool('#f'),
+      '=': function(params) {
+            if (params.length != 2)
+            return Data_bool('#f');
+            if (!compare_data(params[0], params[1]))
+            return Data_bool('#f');
+            return Data_bool('#t');
+                  },
+       '>': function(params) {
+            if (params.length != 2)
+            return Data_bool('#f');
+            if (params[0]['type'] !== 'number' || params[1]['type'] !== 'number')
+            return Data_bool('#f');
+            if (params[0]['val'] > params[1]['val'])
+            return Data_bool('#t');
+            else
+            return Data_bool('#f');
+                  },
+       '<': function(params) {
+            if (params.length != 2)
+            return Data_bool('#f');
+            if (params[0]['type'] !== 'number' || params[1]['type'] !== 'number')
+            return Data_bool('#f');
+            if (params[0]['val'] < params[1]['val'])
+            return Data_bool('#t');
+            else
+            return Data_bool('#f');
+                  },
+      '+': function(params) {
+            var val = params.map(function(v) {
+                  return v['val'];
+            }).reduce(function(preVal, curVal, idx, arr) { 
+                        return preVal + curVal; });
+            return Data_num(val);
+                  },
+      '-': function(params) {
+            var val = params.reduce(
+                  function(preVal, curVal, idx, arr) { 
+                        return preVal['val'] - curVal['val']; });
+            return Data_num(val);
+                  },
+      '*': function(params) {
+            var val = params.reduce(
+                  function(preVal, curVal, idx, arr) { 
+                        return preVal['val'] * curVal['val']; });
+            return Data_num(val);
+                  },
+      '/': function(params) {
+            var val = params.reduce(
+                  function(preVal, curVal, idx, arr) { 
+                        return preVal['val'] / curVal['val']; });
+            return Data_num(val);
+                  },
+      };
+      
+function is_prim_proc(code) {
+      return code[0] in prim_proc;      
+}
+
 /* ================================================
 *   eval exp
 *  ================================================
@@ -248,6 +335,8 @@ function eval(code, env) {
             return eval_var(code, env);
       if (is_define(code))
             return eval_define(code, env);
+      if (is_if(code))
+            return eval_if(code, env);
       if (is_lambda(code))
             return eval_lambda(code, env);
       if (is_apply(code))
@@ -301,6 +390,20 @@ function eval_define(code, env) {
      return null;
 }
 
+function is_if(code) {
+     if (is_leaf(code))
+     return false;
+     return code[0] === 'if' && code.length == 4;
+}
+
+function eval_if(code, env) {
+      debugger
+      if (compare_data(eval(code[1], env), prim_proc['#t']))
+            return eval(code[2], env);
+      else
+            return eval(code[3], env);
+}
+
 function is_lambda(code) {
       // debugger
      if (is_leaf(code))
@@ -325,41 +428,9 @@ function is_apply(code) {
       return (!is_leaf(code)) && code.length > 0;
 }
 
-var prim_proc = {     
-      '+': function(params) {
-            var val = params.map(function(v) {
-                  return v['val'];
-            }).reduce(function(preVal, curVal, idx, arr) { 
-                        return preVal + curVal; });
-            return Data_num(val);
-                  },
-      '-': function(params) {
-            var val = params.reduce(
-                  function(preVal, curVal, idx, arr) { 
-                        return preVal['val'] - curVal['val']; });
-            return Data_num(val);
-                  },
-      '*': function(params) {
-            var val = params.reduce(
-                  function(preVal, curVal, idx, arr) { 
-                        return preVal['val'] * curVal['val']; });
-            return Data_num(val);
-                  },
-      '/': function(params) {
-            var val = params.reduce(
-                  function(preVal, curVal, idx, arr) { 
-                        return preVal['val'] / curVal['val']; });
-            return Data_num(val);
-                  },
-      };
-      
-function is_prim_proc(code) {
-      return code[0] in prim_proc;      
-}
-
 function eval_apply(code, env) {
       // var proc = prim_proc[code['data']];
-      debugger
+      // debugger
       var params = [];
       code.slice(1, code.length).forEach(function(child){
             params.push(eval(child, env));});
@@ -372,7 +443,7 @@ function eval_apply(code, env) {
 }
 
 function apply_prim_proc(proc, params, env) {
-      debugger
+      // debugger
       return proc(params);
 }
 

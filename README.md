@@ -9,11 +9,12 @@ Not finished yet...
 Features implemented:
 
 1. definition: variable, lambda expression
-2. procedure: multi arguments, primitive body, procedure application
+2. syntax: if 
+3. procedure: multi arguments, primitive body, procedure application
 
 Features to be implemented:
 
-1. syntax: if, compound procedure
+1. syntax: compound procedure
 2. data structure: pair, list
 3. syntax suger: let, cond, define function
 4. lazy evaluation: delay, force
