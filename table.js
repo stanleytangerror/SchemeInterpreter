@@ -1,9 +1,18 @@
 function parse() {
       var str = document.getElementById('input-code').value;
-      document.getElementById('output').innerHTML = JSON.stringify(sexp_parse(str));
+      var codes = sexp_parse(str);
+      var env = Env('initial', null);
+      // document.getElementById('output').innerHTML = '<p>' + JSON.stringify(codes) + '<\p>';
+      document.getElementById('output').innerHTML = 
+            codes.reduce(function(preStr, curCode, idx, arr) {
+                  return preStr 
+                  + '<p>' 
+                  + JSON.stringify(eval(curCode, env)) 
+                  + '<\p>'; }, '');
 }
 
 function tokenize(str) {
+      // debugger
       function lst2str(preVal, curVal, idx, arr) { return preVal + curVal; }
       var tokens = [];
       var i = 0;
@@ -13,13 +22,15 @@ function tokenize(str) {
                   case ')':
                   if (tokens.length == 0)
                   return [];
+                  if (stack.length > 0) {
                   tokens.push(stack.reduce(lst2str, ''));
                   stack = [];
+                  }
                   tokens.push(str[i]);
                   i++;
                   break;
                   case '(':
-                  if (tokens.length > 0) {
+                  if (stack.length > 0) {
                   tokens.push(stack.reduce(lst2str, ''));
                   stack = [];
                   }
@@ -47,44 +58,39 @@ function tokenize(str) {
 }
 
 function sexp_parse(str) {
+      // debugger
       var tokens = tokenize(str);
       var i = 0;
-      var stack = [];
-      var brackets = [];
+      var exp = [];
+      exp.push([]);
       // debugger
       while (i < tokens.length) {
             switch (tokens[i]) {
                   case '(':
-                  brackets.push(stack.length);
+                  exp.push([]);
                   i++;
                   break;
                   case ')':
-                  var idx = brackets.pop();
-                  var children = [];
-                  while (stack.length > idx + 1) {
-                        var top = stack.pop();
-                        children.splice(0, 0, top);
-                  }
-                  var cur = stack.pop();
-                  cur['children'] = children;
-                  stack.push(cur);
+                  var subexp = exp.pop();
+                  // if (exp.length == 0)
+                        // exp.push(subexp);
+                  // else
+                        exp[exp.length - 1].push(subexp);
                   i++;
                   break;
                   default:
-                  stack.push({'data': tokens[i]});
+                  exp[exp.length - 1].push(tokens[i]);
                   i++;
                   break;                        
             }
       }
-      if (stack.length != 1)
+      if (exp.length != 1)
             return [];
-      return stack[0];
+      return exp[0];
 }
 
 function is_leaf(obj) {
-      if (obj.hasOwnProperty('children'))
-            return false;
-            return true;
+      return !(Object.prototype.toString.call(obj) === '[object Array]');
 }
 
 function deepcopy(src) {
@@ -119,13 +125,6 @@ function deepcopy(src) {
       }
 }
 
-function Closure(func, env) {
-      return {
-            'func': func,
-            'env' : env
-      };
-}
-
 /** ================================================
 *     environment data type:
 *     to make function as first class data type,
@@ -149,7 +148,7 @@ function ext_env(id, val, env) {
       return new_env;
 }
 
-function def_var(id, val, env) {
+function def_var_ex(id, val, env) {
       env[id] = val;
 }
 
@@ -188,9 +187,9 @@ function Data_var(str) {
       return Data('variable', str); 
 }
 
-function Data_proc(name, params, body, env) {
+function Data_proc(args, body, env) {
       return Data('procedure', 
-            {'parameters': params, 'body': body, 'environment': deepcopy(env)});
+            {'arguments': args, 'body': body, 'environment': deepcopy(env)});
 }
 
 function lookup_var_val(data_var, env) {
@@ -203,7 +202,7 @@ function lookup_var_val(data_var, env) {
 */
 
 function eval(code, env) {
-      debugger
+      // debugger
       if (is_num(code))
             return eval_num(code, env);
       if (is_str(code))
@@ -212,87 +211,83 @@ function eval(code, env) {
             return eval_var(code, env);
       if (is_define(code))
             return eval_define(code, env);
+      if (is_lambda(code))
+            return eval_lambda(code, env);
       if (is_apply(code))
             return eval_apply(code, env);
 }
 
 function is_num(code) {
-      if (!is_leaf(code))
+      if (!is_leaf(code) || !(typeof code === 'string'))
             return false;
-      var str = code['data'];
-      return !isNaN(str);
+      return !isNaN(code);
 }
 
 function eval_num(code) {
-      var str = code['data'];
-      return Data_num(str);
+      return Data_num(code);
 }
 
 function is_str(code) {
-      if (!is_leaf(code))
+      if (!is_leaf(code) || !(typeof code === 'string'))
             return false;
-     if (code['data'].match("\".*\""))
+     if (code.match("\".*\""))
             return true;
      return false;
 }
 
 function eval_str(code) {
-      var str = code['data'];
-      return Data_str(str);
+      return Data_str(code);
 }
 
 function is_var(code) {
-      if (!is_leaf(code))
+      if (!is_leaf(code) || !(typeof code === 'string'))
             return false;
      if (!is_num(code) && !is_str(code))
             return true;
      return false;
 }
 
-function to_var(code) {
-      return Data_var(code['data']);
-}
-
 function eval_var(code, env) {
-     return lookup_var_val(Data_var(code['data']), env);
+     return lookup_var_val(Data_var(code), env);
 }
 
 function is_define(code) {
      if (is_leaf(code))
      return false;
-     return code['data'] === 'define';      
+     return code[0] === 'define';      
 }
 
 function eval_define(code, env) {
-     var data_var = Data_var(code['children'][0]['data']);
-     var data_exp = eval(code['children'][1], env);
-     return def_var(data_var['val'], data_exp, env);
+     var data_var = Data_var(code[1]);
+     var data_exp = eval(code[2], env);
+     def_var_ex(data_var['val'], data_exp, env);
 }
 
 function is_lambda(code) {
+      // debugger
      if (is_leaf(code))
      return false;
-     return code['data'] === 'lambda' && code['children'].length == 2;
+     return code[0] === 'lambda' && code.length == 3;
+}
+
+function eval_args(code, env) {
+     return Data_var(code);
 }
 
 function eval_lambda(code, env) {
-      var params = code['children'][0].forEach(function(child){
-            params.push(eval(child, env));});
-      var body = code['children'][1];
-      return 
+      // debugger
+      var args = [];
+      code[1].forEach(function(child){
+            args.push(eval_args(child, env));});
+      var body = code[2];
+      return Data_proc(args, body, env);
 }
 
 function is_apply(code) {
-      return (!is_leaf(code)) && code['children'].length > 0;
+      return (!is_leaf(code)) && code.length > 0;
 }
 
-function eval_apply(code, env) {
-      if (is_primi_proc(code))
-            return apply_primi_proc(code, env);
-      
-}
-
-var primi_proc = {     
+var prim_proc = {     
       '+': function(params) {
             var val = params.reduce(
                   function(preVal, curVal, idx, arr) { 
@@ -319,14 +314,32 @@ var primi_proc = {
                   },
       };
       
-function is_primi_proc(code) {
-      return code['data'] in primi_proc;      
+function is_prim_proc(code) {
+      return code[0] in prim_proc;      
 }
 
-function apply_primi_proc(code, env) {
-      var proc = primi_proc[code['data']];
+function eval_apply(code, env) {
+      // var proc = prim_proc[code['data']];
+      debugger
       var params = [];
-      code['children'].forEach(function(child){
+      code.slice(1, code.length).forEach(function(child){
             params.push(eval(child, env));});
+      if (is_prim_proc(code))
+            return apply_prim_proc(prim_proc[code[0]], params, env);
+      else {
+                  var proc = eval(code[0], env);
+                  return apply_comp_proc(proc, params, env);
+      }
+}
+
+function apply_prim_proc(proc, params, env) {
+      debugger
       return proc(params);
+}
+
+function apply_comp_proc(proc, params, env) {
+      var i = 0;
+      for (; i < params.length; ++i)
+            var new_env = ext_env(proc['val']['arguments'][i]['val'], params[i], env);
+      return eval(proc['val']['body'], new_env);
 }
