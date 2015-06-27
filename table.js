@@ -1,19 +1,29 @@
+var env = Env('initial', null);
+
+function clear() {
+      env = Env('initial', null);
+}
+
 function parse() {
       var str = document.getElementById('input-code').value;
       var codes = sexp_parse(str);
-      var env = Env('initial', null);
+      if (env === null)
+            clear();
+      debugger
       // document.getElementById('output').innerHTML = '<p>' + JSON.stringify(codes) + '<\p>';
       document.getElementById('output').innerHTML = 
             codes.reduce(function(preStr, curCode, idx, arr) {
                   return preStr 
-                  + '<p>' 
-                  + JSON.stringify(eval(curCode, env)) 
-                  + '<\p>'; }, '');
+                  + '<p><samp> > ' 
+                  + output_data(eval(curCode, env)) 
+                  + '\tenv: '
+                  + output_env(env)
+                  + '</p></samp>'; }, '');
 }
 
 function inc() {
-      document.getElementById('input-code').value = '(define f (lambda (x) (+ x 1)))' 
-      + '(f 2)';
+      document.getElementById('input-code').value = '(define inc (lambda (x) (+ x 1)))\n' 
+      + '(inc 2)';
 }
 
 function tokenize(str) {
@@ -47,6 +57,9 @@ function tokenize(str) {
                         tokens.push(stack.reduce(lst2str, ''));
                         stack = [];
                   }
+                  i++;
+                  break;
+                  case '\n':
                   i++;
                   break;
                   default:
@@ -138,17 +151,17 @@ function deepcopy(src) {
 *   ================================================
 */
 
-function Env(overload, opts) {
+function Env(overload, obj) {
       switch (overload) {
             case 'initial':
             return {};
             case 'copy':
-            return deepcopy(opts['from']);      
+            return deepcopy(obj);      
       }
 }
 
 function ext_env(id, val, env) {
-      var new_env = Env('copy', {'from': env});
+      var new_env = Env('copy', env);
       new_env[id] = val;
       return new_env;
 }
@@ -161,6 +174,13 @@ function look_up(id, env) {
       return deepcopy(env[id]);
 }
 
+function output_env(env) {
+      var str = '';
+      for (key in env) {
+            str += '(' + key + ', ' + output_data(env[key]) + '), ';
+      }
+      return str;
+}
 /** ================================================
 *   median representation:
 *       {
@@ -201,6 +221,18 @@ function lookup_var_val(data_var, env) {
       return look_up(data_var['val'], env);
 }
 
+function output_data(data) {
+      if (data === null)
+      return 'null';
+      switch (data['type']) {
+            case 'string':
+            case 'variable':
+            case 'number':
+            return data['val'];
+            case 'procedure':
+            return 'procedure';
+      }
+}
 /* ================================================
 *   eval exp
 *  ================================================
@@ -266,6 +298,7 @@ function eval_define(code, env) {
      var data_var = Data_var(code[1]);
      var data_exp = eval(code[2], env);
      def_var_ex(data_var['val'], data_exp, env);
+     return null;
 }
 
 function is_lambda(code) {
@@ -294,9 +327,10 @@ function is_apply(code) {
 
 var prim_proc = {     
       '+': function(params) {
-            var val = params.reduce(
-                  function(preVal, curVal, idx, arr) { 
-                        return preVal['val'] + curVal['val']; });
+            var val = params.map(function(v) {
+                  return v['val'];
+            }).reduce(function(preVal, curVal, idx, arr) { 
+                        return preVal + curVal; });
             return Data_num(val);
                   },
       '-': function(params) {
@@ -344,7 +378,8 @@ function apply_prim_proc(proc, params, env) {
 
 function apply_comp_proc(proc, params, env) {
       var i = 0;
+      var new_env = Env('copy', env);
       for (; i < params.length; ++i)
-            var new_env = ext_env(proc['val']['arguments'][i]['val'], params[i], env);
+            new_env = ext_env(proc['val']['arguments'][i]['val'], params[i], new_env);
       return eval(proc['val']['body'], new_env);
 }
