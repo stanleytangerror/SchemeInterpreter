@@ -246,6 +246,30 @@ function Data_proc(args, body, env) {
             {'arguments': args, 'body': body, 'environment': deepcopy(env)});
 }
 
+function Data_pair(car, cdr) {
+      return Data('pair', {'car': car, 'cdr': cdr});
+}
+
+function Data_list(items) {
+      var i = items.length - 1;
+      var cur = Data_empty();
+      for (; i >= 0; --i)
+            cur = Data_pair(items[i], cur);
+      return cur;
+}
+
+function Data_empty() {
+      return Data('empty', null);
+}
+
+function is_list(pair) {
+      debugger
+      var cur = pair;
+      while (cur['type'] === 'pair')
+            cur = cur['val']['cdr'];
+      return cur['type'] === 'empty';
+}
+
 function lookup_var_val(data_var, env) {
       return look_up(data_var['val'], env);
 }
@@ -254,12 +278,30 @@ function output_data(data) {
       if (data === null)
       return 'null';
       switch (data['type']) {
+            case 'empty':
+            return '\'()';
             case 'string':
             case 'variable':
             case 'number':
             return data['val'];
             case 'procedure':
             return 'procedure';
+            case 'pair':
+            if (is_list(data)) {
+                  var str = '( ';
+                  var cur = data;
+                  while (cur['type'] !== 'empty') {
+                        str += output_data(cur['val']['car']) + ' ';
+                        cur = cur['val']['cdr'];
+                  }
+                  return str + ')';
+            } else {
+                  return '(' 
+                  + output_data(data['val']['car']) 
+                  + ' . ' 
+                  + output_data(data['val']['cdr'])
+                  + ')';
+            }
       }
 }
 
@@ -329,6 +371,18 @@ var prim_proc = {
                         return preVal['val'] / curVal['val']; });
             return Data_num(val);
                   },
+      'car': function(param) {
+            return param['val']['car'];
+                  },
+      'cdr': function(param) {
+            return param['val']['cdr'];
+                  },
+      'cons': function(params) {
+            return Data_pair(params[0], params[1]);
+                  },
+      'list': function(params) {
+            return Data_list(params);
+                  }
       };
       
 function is_prim_proc(code) {
@@ -341,7 +395,7 @@ function is_prim_proc(code) {
 */
 
 function eval(code, env) {
-      debugger
+      // debugger
       if (is_num(code))
             return eval_num(code, env);
       if (is_str(code))
@@ -446,7 +500,6 @@ function is_apply(code) {
 function eval_apply(code, env) {
       // var proc = prim_proc[code['data']];
       // debugger
-      var len = code.length;
       var params = [];
       code.slice(1, code.length).forEach(function(child){
             params.push(eval(child, env));});
