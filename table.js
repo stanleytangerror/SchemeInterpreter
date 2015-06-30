@@ -453,10 +453,23 @@ function is_define(code) {
 }
 
 function eval_define(code, env) {
-     var data_var = Data_var(code[1]);
-     var data_exp = eval(code[2], env);
+     debugger
+     var new_code = syntax_reform_define(code);
+     var data_var = Data_var(new_code[1]);
+     var data_exp = eval(new_code[2], env);
      def_var_ex(data_var['val'], data_exp, env);
      return null;
+}
+
+function syntax_reform_define(code) {
+      if (typeof code[1] === 'object') {
+            // (define (func params ...) body)
+            var func = code[1][0];
+            var args = code[1].slice(1, code[1].length);
+            var body = (code.length == 3) ? code[2] : code.slice(2, code.length);
+            return ['define', func, ['lambda', args, body]];
+      }
+      return code;
 }
 
 function is_if(code) {
