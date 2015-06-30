@@ -263,7 +263,7 @@ function Data_empty() {
 }
 
 function is_list(pair) {
-      debugger
+      // debugger
       var cur = pair;
       while (cur['type'] === 'pair')
             cur = cur['val']['cdr'];
@@ -371,11 +371,11 @@ var prim_proc = {
                         return preVal['val'] / curVal['val']; });
             return Data_num(val);
                   },
-      'car': function(param) {
-            return param['val']['car'];
+      'car': function(params) {
+            return params[0]['val']['car'];
                   },
-      'cdr': function(param) {
-            return param['val']['cdr'];
+      'cdr': function(params) {
+            return params[0]['val']['cdr'];
                   },
       'cons': function(params) {
             return Data_pair(params[0], params[1]);
@@ -499,7 +499,7 @@ function is_apply(code) {
 
 function eval_apply(code, env) {
       // var proc = prim_proc[code['data']];
-      // debugger
+      debugger
       var params = [];
       code.slice(1, code.length).forEach(function(child){
             params.push(eval(child, env));});
@@ -507,28 +507,42 @@ function eval_apply(code, env) {
             return apply_prim_proc(prim_proc[code[0]], params, env);
       else {
             var proc = eval(code[0], env);
-            return apply_comp_proc(proc, params, env);
+            return apply_custom_proc(proc, params, env);
       }
+            // if (code.length == 3) {
+            // one procedure
+            // return eval_single_apply(code, params, env);
+      // } else {
+            // multi procedure
+      //       var i = 2;
+      //       for (; i < code.length - 1; ++i)
+      //             eval_single_apply(code[2][i], params, env);
+      //       return eval_single_apply(code[2][i], params, env);
+      // }
 }
 
-function eval_sequence(codes, env) {
-      var len = codes.length;
-      var i = 0;
-      for (; i < len - 1; ++i) {
-            eval(codes[i], env);
-      }
-      return eval(codes[len - 1], env);
-}
+// function eval_single_apply(code, params, env) {
+//       debugger
+//       if (is_prim_proc(code))
+//             return apply_prim_proc(prim_proc[code[0]], params, env);
+//       else {
+//             var proc = eval(code[0], env);
+//             return apply_custom_proc(proc, params, env);
+//       }
+// }
 
 function apply_prim_proc(proc, params, env) {
       // debugger
       return proc(params);
 }
 
-function apply_comp_proc(proc, params, env) {
+function apply_custom_proc(proc, params, env) {
       var i = 0;
       var new_env = Env('copy', env);
       for (; i < params.length; ++i)
             new_env = ext_env(proc['val']['arguments'][i]['val'], params[i], new_env);
-      return eval_sequence(proc['val']['body'], new_env);
+      var body = proc['val']['body'];
+      for (i = 0; i < body.length - 1; ++i)
+            eval(body[i], new_env);
+      return eval(body[body.length - 1], new_env);
 }
