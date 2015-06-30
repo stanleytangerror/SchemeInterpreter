@@ -4,9 +4,7 @@ function clear() {
       env = Env('initial', null);
 }
 
-function parse() {
-      var str = document.getElementById('input-code').value;
-      var codes = sexp_parse(str);
+function interp(codes) {
       if (env === null)
             clear();
       debugger
@@ -19,6 +17,23 @@ function parse() {
                   + '\tenv: '
                   + output_env(env)
                   + '</p></samp>'; }, '');
+}
+
+function show_syntax() {
+      var str = document.getElementById('input-code').value;
+      var codes = sexp_parse(str);
+      document.getElementById('output').innerHTML = 
+            codes.reduce(function(preStr, curCode, idx, arr) {
+                  return preStr 
+                  + '<p><samp> > ' 
+                  + JSON.stringify(codes)
+                  + '</p></samp>'; }, '');
+}
+
+function run() {
+      var str = document.getElementById('input-code').value;
+      var codes = sexp_parse(str);
+      interp(codes);
 }
 
 function inc() {

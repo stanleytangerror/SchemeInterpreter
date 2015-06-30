@@ -20,10 +20,13 @@
           <div class="row row-bottum-buffer">
             <h4>Input:</h4>
             <div class="form-group">
-              <textarea id="input-code" type="text" class="form-control"></textarea>
+              <textarea id="input-code" type="text" rows="8" class="form-control"></textarea>
             </div>
-            <button class="btn btn-default" onclick="parse()">run</button>
-            <button class="btn btn-default" onclick="ckear()">clear</button>
+            <div class="btn-group">
+              <button class="btn btn-default" onclick="run()">run</button>
+              <button class="btn btn-default" onclick="show_syntax()">syntax</button>
+              <button class="btn btn-default" onclick="ckear()">clear</button>
+            </div>
           </div>
           <div class="row row-bottum-buffer">
             <h4>Output:</h4>
